@@ -6,6 +6,30 @@
 
 ---
 
+## 📋 Project Overview
+
+### What is this project?
+This project integrates **OpenClaw** (an AI agent platform) with **Telegram** to create a coding assistant bot that responds to messages via Telegram. The goal is to have an AI assistant accessible through Telegram for software development tasks.
+
+### Current Setup
+- **AI Platform**: OpenClaw (runs on AWS VPS at 100.93.10.110)
+- **Messaging Channel**: Telegram Bot (@assistant_clauze_bot)
+- **AI Models**: Currently using NVIDIA API (Kimi K2.5)
+
+### The Goal
+Create a **CLI Router** that wraps local CLI tools (OpenCode, Kilocode, Claude Code) to provide faster responses than the current NVIDIA API (~10-20s). The router should:
+1. Accept OpenAI-compatible API requests from OpenClaw
+2. Execute CLI commands locally
+3. Return responses in the format OpenClaw expects
+4. Reduce response time to ~3-5 seconds
+
+### Why This Matters
+- **Current**: NVIDIA API works but is slow (~10-20s per response)
+- **Target**: Local CLI execution would be much faster (~3-5s)
+- **Benefit**: Better user experience with quicker responses
+
+---
+
 ## 🎉 Current Status
 
 **✅ Telegram Bot WORKING via NVIDIA API!**
@@ -34,6 +58,77 @@ OpenClaw is configured to use `opencode-local` provider with baseUrl `http://127
 4. OpenClaw stores empty content `[]` in session
 
 **This means:** OpenClaw is NOT actually calling the router despite being configured to!
+
+---
+
+## 🏗️ System Architecture
+
+```
+┌─────────────────┐
+│   Telegram User │
+│   (Your Phone)  │
+└────────┬────────┘
+         │
+         │ Sends message
+         ▼
+┌─────────────────┐
+│ Telegram Server │
+└────────┬────────┘
+         │
+         │ Webhook/Polling
+         ▼
+┌─────────────────────────┐      AWS VPS (100.93.10.110)
+│   OpenClaw Gateway      │     ┌─────────────────────┐
+│   Port: 18789           │────▶│                     │
+│                         │     │  OpenClaw Agent     │
+└────────┬────────────────┘     │                     │
+         │                      └──────────┬──────────┘
+         │ Calls API                              │
+         ▼                                          │
+┌─────────────────────────┐                       │
+│   AI Provider           │                       │
+│   (Two Options)         │                       │
+├─────────────────────────┤                       │
+│  Option 1: NVIDIA API   │◀──────────────────────┤
+│  - Works ✅             │    Currently Active   │
+│  - Slow (~10-20s)       │                       │
+│  - Remote service       │                       │
+├─────────────────────────┤                       │
+│  Option 2: CLI Router   │                       │
+│  - Port 4097            │                       │
+│  - Fast (~3-5s)         │                       │
+│  - Local execution      │                       │
+│  - NOT WORKING ❌       │                       │
+└─────────────────────────┘                       │
+                                                  │
+┌─────────────────────────┐                       │
+│   CLI Router            │◀──────────────────────┘
+│   Port: 4097            │    Should be called
+│   (Built but unused)    │
+│                         │
+│  ┌─────────────────┐    │
+│  │ OpenCode CLI    │    │
+│  │ opencode run    │    │
+│  └─────────────────┘    │
+└─────────────────────────┘
+```
+
+### Data Flow (Current - NVIDIA)
+1. User sends message in Telegram
+2. Telegram forwards to OpenClaw
+3. OpenClaw calls NVIDIA API (https://integrate.api.nvidia.com/v1)
+4. NVIDIA returns AI response
+5. OpenClaw sends reply back to Telegram
+6. **Response time: ~10-20 seconds**
+
+### Data Flow (Target - Local Router)
+1. User sends message in Telegram
+2. Telegram forwards to OpenClaw
+3. OpenClaw calls local router (http://127.0.0.1:4097/v1)
+4. Router executes OpenCode CLI locally
+5. Router returns AI response
+6. OpenClaw sends reply back to Telegram
+7. **Response time: ~3-5 seconds**
 
 ---
 
